@@ -22,6 +22,7 @@ function useSingles() {
 
         function fetchSingles() {
             const iframeSingles = $('<iframe id="iframe-singles" style="display:none;"></iframe>');
+            iframeSingles.attr('sandbox', 'allow-same-origin'); // restrict to same-origin content only
             $('body').append(iframeSingles);
 
             const urlDomain = getUrlDomain();
@@ -30,6 +31,10 @@ function useSingles() {
 
             $('#iframe-singles').on('load', function () {
                 const iframeContents = $('#iframe-singles').contents();
+                // Remove CSS, scripts, and other unnecessary resources
+                iframeContents.find('style, link[rel="stylesheet"], script').remove();
+                // Optionally remove specific elements if they are not needed
+                iframeContents.find('.header, .footer').remove();
                 const singleElements = iframeContents.find('#tablesingles tbody tr').slice(0, 4); // Seleciona os últimos 4 singles
 
                 const singleHrefs = singleElements.map(function () {

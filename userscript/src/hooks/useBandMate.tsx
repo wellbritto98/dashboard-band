@@ -9,6 +9,7 @@ function useBandmate() {
     const [bandmates, setBandmates] = useState<Bandmate[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const artistId = useSelector((state: RootState) => state.artist.artistId);
+    let iframe: JQuery<HTMLElement>;
 
     useEffect(() => {
         if (!artistId) return;
@@ -40,172 +41,141 @@ function useBandmate() {
             return bandmates;
         }
 
-        async function fetchBandmateSq(bandmate: Bandmate): Promise<Bandmate> {
+        function createIframe() {
+            iframe = $('<iframe id="iframe-bandmate-data" style="display:none;"></iframe>');
+            iframe.attr('sandbox', 'allow-same-origin'); // restrict to same-origin content only
+            $('body').append(iframe);
+            return iframe;
+        }
+
+        async function loadIframe(url: string): Promise<JQuery<Document>> {
             return new Promise((resolve, reject) => {
-                const iframe = $('<iframe id="iframe-bandmate-sq" style="display:none;"></iframe>');
-                $('body').append(iframe);
-
-                const urlDomain = getUrlDomain();
-                const url = `https://${urlDomain}/World/Popmundo.aspx/Character/${bandmate.id}`;
-                $('#iframe-bandmate-sq').attr('src', url);
-
-                $('#iframe-bandmate-sq').on('load', function () {
-                    const iframeContents = $('#iframe-bandmate-sq').contents();
-                    const sqElement = iframeContents.find('.charMainValues table.width100 tbody tr').eq(2).find('td span.sortkey');
-
-                    if (sqElement.length > 0) {
-                        const sqValue = parseInt(sqElement.text().trim(), 10);
-                        bandmate.sq = !isNaN(sqValue) ? sqValue : 0;
-                        resolve(bandmate);
-                    } else {
-                        reject(new Error("Elemento de Star Quality (SQ) não encontrado."));
-                    }
-
-                    $('#iframe-bandmate-sq').remove();
+                iframe.off('load').on('load', function () {
+                    const iframeDoc = iframe.contents() as JQuery<Document>;
+                    
+                    // Remove CSS, scripts, and other unnecessary resources
+                    iframeDoc.find('style, link[rel="stylesheet"], script').remove();
+        
+                    // Optionally remove specific elements if they are not needed
+                    iframeDoc.find('.header, .footer').remove();
+        
+                    resolve(iframeDoc);
                 });
+                iframe.attr('src', url);
             });
+        }
+        
+
+        
+
+        async function fetchBandmateSq(bandmate: Bandmate): Promise<Bandmate> {
+            const urlDomain = getUrlDomain();
+            const url = `https://${urlDomain}/World/Popmundo.aspx/Character/${bandmate.id}`;
+            const iframeContents = await loadIframe(url);
+
+            const sqElement = iframeContents.find('.charMainValues table.width100 tbody tr').eq(2).find('td span.sortkey');
+            const sqValue = parseInt(sqElement.text().trim(), 10);
+            bandmate.sq = !isNaN(sqValue) ? sqValue : 0;
+
+            return bandmate;
         }
 
         async function fetchBandmateRelationship(bandmate: Bandmate): Promise<Bandmate> {
-            return new Promise((resolve, reject) => {
-                const iframe = $('<iframe id="iframe-bandmate-relationship" style="display:none;"></iframe>');
-                $('body').append(iframe);
-        
-                const urlDomain = getUrlDomain();
-                const url = `https://${urlDomain}/World/Popmundo.aspx/Interact/Details/${bandmate.id}`;
-                $('#iframe-bandmate-relationship').attr('src', url);
-        
-                $('#iframe-bandmate-relationship').on('load', function () {
-                    const iframeContents = $('#iframe-bandmate-relationship').contents();
-        
-                    try {
-                        // Accessing rows by index instead of labels
-                        const romanceElement = iframeContents.find('table.width100 tbody tr').eq(0).find('td').eq(1).find('span.sortkey');
-                        const romance = parseInt(romanceElement.text().trim(), 10);
-        
-                        const friendshipElement = iframeContents.find('table.width100 tbody tr').eq(1).find('td').eq(1).find('span.sortkey');
-                        const friendship = parseInt(friendshipElement.text().trim(), 10);
-        
-                        const hateElement = iframeContents.find('table.width100 tbody tr').eq(2).find('td').eq(1).find('span.sortkey');
-                        const hate = parseInt(hateElement.text().trim(), 10);
-        
-                        bandmate.romance = !isNaN(romance) ? romance : 0;
-                        bandmate.friendship = !isNaN(friendship) ? friendship : 0;
-                        bandmate.hate = !isNaN(hate) ? hate : 0;
-        
-                        resolve(bandmate);
-                    } catch (error) {
-                        reject(new Error("Error extracting relationship data"));
-                    }
-        
-                    $('#iframe-bandmate-relationship').remove();
-                });
-            });
+            const urlDomain = getUrlDomain();
+            const url = `https://${urlDomain}/World/Popmundo.aspx/Interact/Details/${bandmate.id}`;
+            const iframeContents = await loadIframe(url);
+
+            const romanceElement = iframeContents.find('table.width100 tbody tr').eq(0).find('td').eq(1).find('span.sortkey');
+            const friendshipElement = iframeContents.find('table.width100 tbody tr').eq(1).find('td').eq(1).find('span.sortkey');
+            const hateElement = iframeContents.find('table.width100 tbody tr').eq(2).find('td').eq(1).find('span.sortkey');
+
+            bandmate.romance = parseInt(romanceElement.text().trim(), 10) || 0;
+            bandmate.friendship = parseInt(friendshipElement.text().trim(), 10) || 0;
+            bandmate.hate = parseInt(hateElement.text().trim(), 10) || 0;
+
+            return bandmate;
         }
-        
 
         async function fetchInstrumentQuality(instrument: Instrument): Promise<Instrument> {
-            console.log(`Fetching quality for instrument: ${instrument.name} (ID: ${instrument.id})`);
-            return new Promise((resolve) => {
-                const iframeId = `iframe-instrument-quality-${instrument.id}`;
-                const iframe = $(`<iframe id="${iframeId}" style="display:none;"></iframe>`);
-                $('body').append(iframe);
-        
-                const urlDomain = getUrlDomain();
-                const url = `https://${urlDomain}/World/Popmundo.aspx/Character/ItemDetails/${instrument.id}`;
-                $(`#${iframeId}`).attr('src', url);
-        
-                $(`#${iframeId}`).on('load', function () {
-                    const iframeContents = $(`#${iframeId}`).contents();
-                    const qualityText = iframeContents.find('tr:contains("Qualidade") td:nth-child(2) a').attr('title') || iframeContents.find('tr:contains("Quality") td:nth-child(2) a').attr('title');
-        
-                    if (qualityText) {
-                        const qualityValue = parseInt(qualityText.split('/')[0], 10);
-                        instrument.quality = qualityValue;
-                        console.log(`Quality fetched for instrument: ${instrument.name} (ID: ${instrument.id}) - Quality: ${qualityValue}`);
-                    } else {
-                        console.log(`Quality not found for instrument: ${instrument.name} (ID: ${instrument.id})`);
-                    }
-        
-                    $(`#${iframeId}`).remove();
-                    resolve(instrument);
-                });
-            });
+            const urlDomain = getUrlDomain();
+            const url = `https://${urlDomain}/World/Popmundo.aspx/Character/ItemDetails/${instrument.id}`;
+            const iframeContents = await loadIframe(url);
+
+            const qualityText = iframeContents.find('tr:contains("Qualidade") td:nth-child(2) a').attr('title') ||
+                iframeContents.find('tr:contains("Quality") td:nth-child(2) a').attr('title');
+
+            if (qualityText) {
+                instrument.quality = parseInt(qualityText.split('/')[0], 10);
+            }
+
+            return instrument;
         }
-        
+
         async function fetchInstruments(bandmate: Bandmate): Promise<Instrument[]> {
-            console.log(`Fetching instruments for bandmate: ${bandmate.name} (ID: ${bandmate.id})`);
-            return new Promise((resolve) => {
-                const iframeId = `iframe-instruments-${bandmate.id}`;
-                const iframe = $(`<iframe id="${iframeId}" style="display:none;"></iframe>`);
-                $('body').append(iframe);
-        
-                const urlDomain = getUrlDomain();
-                const url = `https://${urlDomain}/World/Popmundo.aspx/Character/Items/${bandmate.id}`;
-                $(`#${iframeId}`).attr('src', url);
-        
-                $(`#${iframeId}`).on('load', async function () {
-                    const iframeContents = $(`#${iframeId}`).contents();
-                    const rows = iframeContents.find('#checkedlist tbody tr');
-                    const instruments: Instrument[] = [];
-                    let isInstrumentGroup = false;
-        
-                    rows.each(function () {
-                        const row = $(this);
-        
-                        if (row.hasClass('group') && row.find('td').text().trim() === 'Instrumentos musicais' || row.find('td').text().trim() === 'Musical Instrument') {
-                            isInstrumentGroup = true;
-                            return;
-                        }
-        
-                        if (row.hasClass('group') && isInstrumentGroup) {
-                            isInstrumentGroup = false;
-                        }
-        
-                        if (isInstrumentGroup && !row.hasClass('group')) {
-                            const name = row.find('td a').text().trim();
-                            const url = row.find('td a').attr('href');
-                            const idMatch = url ? url.match(/(\d+)$/) : null;
-                            const id = idMatch ? parseInt(idMatch[0], 10) : null;
-        
-                            if (name && id) {
-                                const instrument = new InstrumentImpl(id, name);
-                                instruments.push(instrument);
-                                console.log(`Instrument added: ${name} (ID: ${id}) for bandmate: ${bandmate.name}`);
-                            }
-                        }
-                    });
-        
-                    // Fetch qualities sequentially
-                    for (const instrument of instruments) {
-                        await fetchInstrumentQuality(instrument);
+            const urlDomain = getUrlDomain();
+            const url = `https://${urlDomain}/World/Popmundo.aspx/Character/Items/${bandmate.id}`;
+            const iframeContents = await loadIframe(url);
+
+            const rows = iframeContents.find('#checkedlist tbody tr');
+            const instruments: Instrument[] = [];
+            let isInstrumentGroup = false;
+
+            rows.each(function () {
+                const row = $(this);
+
+                if (row.hasClass('group') && (row.find('td').text().trim() === 'Instrumentos musicais' || row.find('td').text().trim() === 'Musical Instrument')) {
+                    isInstrumentGroup = true;
+                    return;
+                }
+
+                if (row.hasClass('group') && isInstrumentGroup) {
+                    isInstrumentGroup = false;
+                }
+
+                if (isInstrumentGroup && !row.hasClass('group')) {
+                    const name = row.find('td a').text().trim();
+                    const url = row.find('td a').attr('href');
+                    const idMatch = url ? url.match(/(\d+)$/) : null;
+                    const id = idMatch ? parseInt(idMatch[0], 10) : null;
+
+                    if (name && id) {
+                        const instrument = new InstrumentImpl(id, name);
+                        instruments.push(instrument);
                     }
-        
-                    $(`#${iframeId}`).remove();
-                    console.log(`Finished fetching instruments for bandmate: ${bandmate.name}`);
-                    resolve(instruments);
-                });
+                }
             });
+
+            for (const instrument of instruments) {
+                await fetchInstrumentQuality(instrument);
+            }
+
+            return instruments;
         }
-        
+
         async function loadBandmatesData() {
+            console.time("Data Collection Time"); // Start timer
             setIsLoading(true);
+            createIframe(); // Create a persistent iframe
         
             const initialBandmates = getBandmates();
         
             for (const bandmate of initialBandmates) {
                 await fetchBandmateSq(bandmate);
-                const instruments = await fetchInstruments(bandmate); // Wait for instruments with quality
-                bandmate.instruments = instruments;
+                bandmate.instruments = await fetchInstruments(bandmate);
                 await fetchBandmateRelationship(bandmate);
             }
         
             setBandmates(initialBandmates);
             setIsLoading(false);
+            console.timeEnd("Data Collection Time"); // End timer and log time
         }
         
-
         loadBandmatesData();
+        
+        return () => {
+            iframe.remove();
+        };
+        
     }, [artistId]);
 
     return { bandmates, isLoading };

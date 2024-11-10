@@ -20,6 +20,7 @@ function useGlobalPopularityAndFame() {
 
         function fetchPopularityAndFame() {
             let iframe = $('<iframe id="iframe-global-data" style="display:none;"></iframe>');
+            iframe.attr('sandbox', 'allow-same-origin'); // restrict to same-origin content only
             $('body').append(iframe);
 
             const urlDomain = getUrlDomain();
@@ -28,6 +29,12 @@ function useGlobalPopularityAndFame() {
 
             $('#iframe-global-data').on('load', function () {
                 const iframeContents = $('#iframe-global-data').contents();
+
+                // Remove CSS, scripts, and other unnecessary resources
+                iframeContents.find('style, link[rel="stylesheet"], script').remove();
+
+                // Optionally remove specific elements if they are not needed
+                iframeContents.find('.header, .footer').remove();
                 const rows = iframeContents.find('#tablefame tbody tr');
 
                 const newPopularityList: Popularity[] = [];

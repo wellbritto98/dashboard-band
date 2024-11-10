@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name     Artist's Dashboard Dev
 // @namespace https://github.com/siefkenj/react-userscripts
-// @version  1.1
+// @version  1.4
+// @license  MIT
 // @description A sample userscript built using react
-// @include https://*.popmundo.com/World/Popmundo.aspx/Artist/*
+// @include https://*.popmundo.com/World/Popmundo.aspx/Artist*
 // @grant    none
 // ==/UserScript==
 
@@ -23878,12 +23879,15 @@ To suppress this warning, you need to explicitly provide the \`palette.${key}Cha
       }
       function fetchPopularityAndFame() {
         let iframe = $('<iframe id="iframe-global-data" style="display:none;"></iframe>');
+        iframe.attr("sandbox", "allow-same-origin");
         $("body").append(iframe);
         const urlDomain = getUrlDomain();
         const url = `https://${urlDomain}/World/Popmundo.aspx/Artist/Popularity/${artistId}`;
         $("#iframe-global-data").attr("src", url);
         $("#iframe-global-data").on("load", function() {
           const iframeContents = $("#iframe-global-data").contents();
+          iframeContents.find('style, link[rel="stylesheet"], script').remove();
+          iframeContents.find(".header, .footer").remove();
           const rows = iframeContents.find("#tablefame tbody tr");
           const newPopularityList = [];
           rows.each(function() {
@@ -23923,12 +23927,15 @@ To suppress this warning, you need to explicitly provide the \`palette.${key}Cha
       }
       function fetchSegmentation() {
         let iframe = $('<iframe id="iframe-segmentation" style="display:none;"></iframe>');
+        iframe.attr("sandbox", "allow-same-origin");
         $("body").append(iframe);
         let urlDomain = getUrlDomain();
         let url = `https://${urlDomain}/World/Popmundo.aspx/Artist/Popularity/${artistId}`;
         $("#iframe-segmentation").attr("src", url);
         $("#iframe-segmentation").on("load", function() {
           let iframeContents = $("#iframe-segmentation").contents();
+          iframeContents.find('style, link[rel="stylesheet"], script').remove();
+          iframeContents.find(".header, .footer").remove();
           const rows = iframeContents.find("#tablemarketsegments tbody tr");
           const newSegmentationList = [];
           rows.each(function() {
@@ -23986,12 +23993,15 @@ To suppress this warning, you need to explicitly provide the \`palette.${key}Cha
       }
       function fetchSingles() {
         const iframeSingles = $('<iframe id="iframe-singles" style="display:none;"></iframe>');
+        iframeSingles.attr("sandbox", "allow-same-origin");
         $("body").append(iframeSingles);
         const urlDomain = getUrlDomain();
         const url = `https://${urlDomain}/World/Popmundo.aspx/Artist/Records/${artistId}`;
         $("#iframe-singles").attr("src", url);
         $("#iframe-singles").on("load", function() {
           const iframeContents = $("#iframe-singles").contents();
+          iframeContents.find('style, link[rel="stylesheet"], script').remove();
+          iframeContents.find(".header, .footer").remove();
           const singleElements = iframeContents.find("#tablesingles tbody tr").slice(0, 4);
           const singleHrefs = singleElements.map(function() {
             const singleHref = $(this).find("a").attr("href");
@@ -36212,6 +36222,7 @@ To suppress this warning, you need to explicitly provide the \`palette.${key}Cha
     const [bandmates, setBandmates] = reactExports.useState([]);
     const [isLoading, setIsLoading] = reactExports.useState(true);
     const artistId = useSelector((state) => state.artist.artistId);
+    let iframe;
     reactExports.useEffect(() => {
       if (!artistId) return;
       function getUrlDomain() {
@@ -36235,135 +36246,104 @@ To suppress this warning, you need to explicitly provide the \`palette.${key}Cha
         });
         return bandmates2;
       }
-      async function fetchBandmateSq(bandmate) {
+      function createIframe() {
+        iframe = $('<iframe id="iframe-bandmate-data" style="display:none;"></iframe>');
+        iframe.attr("sandbox", "allow-same-origin");
+        $("body").append(iframe);
+        return iframe;
+      }
+      async function loadIframe(url) {
         return new Promise((resolve, reject) => {
-          const iframe = $('<iframe id="iframe-bandmate-sq" style="display:none;"></iframe>');
-          $("body").append(iframe);
-          const urlDomain = getUrlDomain();
-          const url = `https://${urlDomain}/World/Popmundo.aspx/Character/${bandmate.id}`;
-          $("#iframe-bandmate-sq").attr("src", url);
-          $("#iframe-bandmate-sq").on("load", function() {
-            const iframeContents = $("#iframe-bandmate-sq").contents();
-            const sqElement = iframeContents.find(".charMainValues table.width100 tbody tr").eq(2).find("td span.sortkey");
-            if (sqElement.length > 0) {
-              const sqValue = parseInt(sqElement.text().trim(), 10);
-              bandmate.sq = !isNaN(sqValue) ? sqValue : 0;
-              resolve(bandmate);
-            } else {
-              reject(new Error("Elemento de Star Quality (SQ) não encontrado."));
-            }
-            $("#iframe-bandmate-sq").remove();
+          iframe.off("load").on("load", function() {
+            const iframeDoc = iframe.contents();
+            iframeDoc.find('style, link[rel="stylesheet"], script').remove();
+            iframeDoc.find(".header, .footer").remove();
+            resolve(iframeDoc);
           });
+          iframe.attr("src", url);
         });
+      }
+      async function fetchBandmateSq(bandmate) {
+        const urlDomain = getUrlDomain();
+        const url = `https://${urlDomain}/World/Popmundo.aspx/Character/${bandmate.id}`;
+        const iframeContents = await loadIframe(url);
+        const sqElement = iframeContents.find(".charMainValues table.width100 tbody tr").eq(2).find("td span.sortkey");
+        const sqValue = parseInt(sqElement.text().trim(), 10);
+        bandmate.sq = !isNaN(sqValue) ? sqValue : 0;
+        return bandmate;
       }
       async function fetchBandmateRelationship(bandmate) {
-        return new Promise((resolve, reject) => {
-          const iframe = $('<iframe id="iframe-bandmate-relationship" style="display:none;"></iframe>');
-          $("body").append(iframe);
-          const urlDomain = getUrlDomain();
-          const url = `https://${urlDomain}/World/Popmundo.aspx/Interact/Details/${bandmate.id}`;
-          $("#iframe-bandmate-relationship").attr("src", url);
-          $("#iframe-bandmate-relationship").on("load", function() {
-            const iframeContents = $("#iframe-bandmate-relationship").contents();
-            try {
-              const romanceElement = iframeContents.find("table.width100 tbody tr").eq(0).find("td").eq(1).find("span.sortkey");
-              const romance = parseInt(romanceElement.text().trim(), 10);
-              const friendshipElement = iframeContents.find("table.width100 tbody tr").eq(1).find("td").eq(1).find("span.sortkey");
-              const friendship = parseInt(friendshipElement.text().trim(), 10);
-              const hateElement = iframeContents.find("table.width100 tbody tr").eq(2).find("td").eq(1).find("span.sortkey");
-              const hate = parseInt(hateElement.text().trim(), 10);
-              bandmate.romance = !isNaN(romance) ? romance : 0;
-              bandmate.friendship = !isNaN(friendship) ? friendship : 0;
-              bandmate.hate = !isNaN(hate) ? hate : 0;
-              resolve(bandmate);
-            } catch (error) {
-              reject(new Error("Error extracting relationship data"));
-            }
-            $("#iframe-bandmate-relationship").remove();
-          });
-        });
+        const urlDomain = getUrlDomain();
+        const url = `https://${urlDomain}/World/Popmundo.aspx/Interact/Details/${bandmate.id}`;
+        const iframeContents = await loadIframe(url);
+        const romanceElement = iframeContents.find("table.width100 tbody tr").eq(0).find("td").eq(1).find("span.sortkey");
+        const friendshipElement = iframeContents.find("table.width100 tbody tr").eq(1).find("td").eq(1).find("span.sortkey");
+        const hateElement = iframeContents.find("table.width100 tbody tr").eq(2).find("td").eq(1).find("span.sortkey");
+        bandmate.romance = parseInt(romanceElement.text().trim(), 10) || 0;
+        bandmate.friendship = parseInt(friendshipElement.text().trim(), 10) || 0;
+        bandmate.hate = parseInt(hateElement.text().trim(), 10) || 0;
+        return bandmate;
       }
       async function fetchInstrumentQuality(instrument) {
-        console.log(`Fetching quality for instrument: ${instrument.name} (ID: ${instrument.id})`);
-        return new Promise((resolve) => {
-          const iframeId = `iframe-instrument-quality-${instrument.id}`;
-          const iframe = $(`<iframe id="${iframeId}" style="display:none;"></iframe>`);
-          $("body").append(iframe);
-          const urlDomain = getUrlDomain();
-          const url = `https://${urlDomain}/World/Popmundo.aspx/Character/ItemDetails/${instrument.id}`;
-          $(`#${iframeId}`).attr("src", url);
-          $(`#${iframeId}`).on("load", function() {
-            const iframeContents = $(`#${iframeId}`).contents();
-            const qualityText = iframeContents.find('tr:contains("Qualidade") td:nth-child(2) a').attr("title") || iframeContents.find('tr:contains("Quality") td:nth-child(2) a').attr("title");
-            if (qualityText) {
-              const qualityValue = parseInt(qualityText.split("/")[0], 10);
-              instrument.quality = qualityValue;
-              console.log(`Quality fetched for instrument: ${instrument.name} (ID: ${instrument.id}) - Quality: ${qualityValue}`);
-            } else {
-              console.log(`Quality not found for instrument: ${instrument.name} (ID: ${instrument.id})`);
-            }
-            $(`#${iframeId}`).remove();
-            resolve(instrument);
-          });
-        });
+        const urlDomain = getUrlDomain();
+        const url = `https://${urlDomain}/World/Popmundo.aspx/Character/ItemDetails/${instrument.id}`;
+        const iframeContents = await loadIframe(url);
+        const qualityText = iframeContents.find('tr:contains("Qualidade") td:nth-child(2) a').attr("title") || iframeContents.find('tr:contains("Quality") td:nth-child(2) a').attr("title");
+        if (qualityText) {
+          instrument.quality = parseInt(qualityText.split("/")[0], 10);
+        }
+        return instrument;
       }
       async function fetchInstruments(bandmate) {
-        console.log(`Fetching instruments for bandmate: ${bandmate.name} (ID: ${bandmate.id})`);
-        return new Promise((resolve) => {
-          const iframeId = `iframe-instruments-${bandmate.id}`;
-          const iframe = $(`<iframe id="${iframeId}" style="display:none;"></iframe>`);
-          $("body").append(iframe);
-          const urlDomain = getUrlDomain();
-          const url = `https://${urlDomain}/World/Popmundo.aspx/Character/Items/${bandmate.id}`;
-          $(`#${iframeId}`).attr("src", url);
-          $(`#${iframeId}`).on("load", async function() {
-            const iframeContents = $(`#${iframeId}`).contents();
-            const rows = iframeContents.find("#checkedlist tbody tr");
-            const instruments = [];
-            let isInstrumentGroup = false;
-            rows.each(function() {
-              const row = $(this);
-              if (row.hasClass("group") && row.find("td").text().trim() === "Instrumentos musicais" || row.find("td").text().trim() === "Musical Instrument") {
-                isInstrumentGroup = true;
-                return;
-              }
-              if (row.hasClass("group") && isInstrumentGroup) {
-                isInstrumentGroup = false;
-              }
-              if (isInstrumentGroup && !row.hasClass("group")) {
-                const name = row.find("td a").text().trim();
-                const url2 = row.find("td a").attr("href");
-                const idMatch = url2 ? url2.match(/(\d+)$/) : null;
-                const id2 = idMatch ? parseInt(idMatch[0], 10) : null;
-                if (name && id2) {
-                  const instrument = new InstrumentImpl(id2, name);
-                  instruments.push(instrument);
-                  console.log(`Instrument added: ${name} (ID: ${id2}) for bandmate: ${bandmate.name}`);
-                }
-              }
-            });
-            for (const instrument of instruments) {
-              await fetchInstrumentQuality(instrument);
+        const urlDomain = getUrlDomain();
+        const url = `https://${urlDomain}/World/Popmundo.aspx/Character/Items/${bandmate.id}`;
+        const iframeContents = await loadIframe(url);
+        const rows = iframeContents.find("#checkedlist tbody tr");
+        const instruments = [];
+        let isInstrumentGroup = false;
+        rows.each(function() {
+          const row = $(this);
+          if (row.hasClass("group") && (row.find("td").text().trim() === "Instrumentos musicais" || row.find("td").text().trim() === "Musical Instrument")) {
+            isInstrumentGroup = true;
+            return;
+          }
+          if (row.hasClass("group") && isInstrumentGroup) {
+            isInstrumentGroup = false;
+          }
+          if (isInstrumentGroup && !row.hasClass("group")) {
+            const name = row.find("td a").text().trim();
+            const url2 = row.find("td a").attr("href");
+            const idMatch = url2 ? url2.match(/(\d+)$/) : null;
+            const id2 = idMatch ? parseInt(idMatch[0], 10) : null;
+            if (name && id2) {
+              const instrument = new InstrumentImpl(id2, name);
+              instruments.push(instrument);
             }
-            $(`#${iframeId}`).remove();
-            console.log(`Finished fetching instruments for bandmate: ${bandmate.name}`);
-            resolve(instruments);
-          });
+          }
         });
+        for (const instrument of instruments) {
+          await fetchInstrumentQuality(instrument);
+        }
+        return instruments;
       }
       async function loadBandmatesData() {
+        console.time("Data Collection Time");
         setIsLoading(true);
+        createIframe();
         const initialBandmates = getBandmates();
         for (const bandmate of initialBandmates) {
           await fetchBandmateSq(bandmate);
-          const instruments = await fetchInstruments(bandmate);
-          bandmate.instruments = instruments;
+          bandmate.instruments = await fetchInstruments(bandmate);
           await fetchBandmateRelationship(bandmate);
         }
         setBandmates(initialBandmates);
         setIsLoading(false);
+        console.timeEnd("Data Collection Time");
       }
       loadBandmatesData();
+      return () => {
+        iframe.remove();
+      };
     }, [artistId]);
     return { bandmates, isLoading };
   }

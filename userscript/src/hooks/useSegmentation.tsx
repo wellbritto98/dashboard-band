@@ -21,6 +21,7 @@ function useSegmentation() {
 
         function fetchSegmentation() {
             let iframe = $('<iframe id="iframe-segmentation" style="display:none;"></iframe>');
+            iframe.attr('sandbox', 'allow-same-origin'); // restrict to same-origin content only
             $('body').append(iframe);
 
             let urlDomain = getUrlDomain();
@@ -29,6 +30,11 @@ function useSegmentation() {
 
             $('#iframe-segmentation').on('load', function () {
                 let iframeContents = $('#iframe-segmentation').contents();
+                 // Remove CSS, scripts, and other unnecessary resources
+                 iframeContents.find('style, link[rel="stylesheet"], script').remove();
+
+                 // Optionally remove specific elements if they are not needed
+                 iframeContents.find('.header, .footer').remove();
                 const rows = iframeContents.find('#tablemarketsegments tbody tr');
                 
                 const newSegmentationList: Segmentation[] = [];
