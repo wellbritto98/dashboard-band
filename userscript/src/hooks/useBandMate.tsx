@@ -1,18 +1,21 @@
 import { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { RootState } from '../redux/store';
-import $ from 'jquery';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '../redux/store';
 import { Bandmate, BandmateImpl } from '../shared/interfaces/bandmate';
 import { Instrument, InstrumentImpl } from '../shared/interfaces/instrument';
+import { addTaskToQueue } from '../redux/iframeSlice';
+import { processQueue } from '../redux/actions/processIframeQueue';
+import $ from 'jquery';
 
 function useBandmate() {
     const [bandmates, setBandmates] = useState<Bandmate[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const artistId = useSelector((state: RootState) => state.artist.artistId);
-    let iframe: JQuery<HTMLElement>;
+    const iframeId = useSelector((state: RootState) => state.iframe.iframeId);
+    const dispatch: AppDispatch = useDispatch();
 
     useEffect(() => {
-        if (!artistId) return;
+        if (!artistId || !iframeId) return;
 
         function getUrlDomain() {
             return window.location.hostname;
@@ -41,32 +44,12 @@ function useBandmate() {
             return bandmates;
         }
 
-        function createIframe() {
-            iframe = $('<iframe id="iframe-bandmate-data" style="display:none;"></iframe>');
-            iframe.attr('sandbox', 'allow-same-origin'); // restrict to same-origin content only
-            $('body').append(iframe);
-            return iframe;
-        }
-
         async function loadIframe(url: string): Promise<JQuery<Document>> {
             return new Promise((resolve, reject) => {
-                iframe.off('load').on('load', function () {
-                    const iframeDoc = iframe.contents() as JQuery<Document>;
-                    
-                    // Remove CSS, scripts, and other unnecessary resources
-                    iframeDoc.find('style, link[rel="stylesheet"], script').remove();
-        
-                    // Optionally remove specific elements if they are not needed
-                    iframeDoc.find('.header, .footer').remove();
-        
-                    resolve(iframeDoc);
-                });
-                iframe.attr('src', url);
+                dispatch(addTaskToQueue({ url, resolve, reject }));
+                dispatch(processQueue());
             });
         }
-        
-
-        
 
         async function fetchBandmateSq(bandmate: Bandmate): Promise<Bandmate> {
             const urlDomain = getUrlDomain();
@@ -155,28 +138,22 @@ function useBandmate() {
         async function loadBandmatesData() {
             console.time("Data Collection Time"); // Start timer
             setIsLoading(true);
-            createIframe(); // Create a persistent iframe
-        
+
             const initialBandmates = getBandmates();
-        
+
             for (const bandmate of initialBandmates) {
                 await fetchBandmateSq(bandmate);
                 bandmate.instruments = await fetchInstruments(bandmate);
                 await fetchBandmateRelationship(bandmate);
             }
-        
+
             setBandmates(initialBandmates);
             setIsLoading(false);
             console.timeEnd("Data Collection Time"); // End timer and log time
         }
-        
+
         loadBandmatesData();
-        
-        return () => {
-            iframe.remove();
-        };
-        
-    }, [artistId]);
+    }, [artistId, iframeId, dispatch]);
 
     return { bandmates, isLoading };
 }

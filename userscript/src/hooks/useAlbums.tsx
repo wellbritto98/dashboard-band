@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '../redux/store';
-import { Single, SingleImpl } from '../shared/interfaces/single';
+import { Album, AlbumImpl } from '../shared/interfaces/album.ts';
 import { addTaskToQueue } from '../redux/iframeSlice';
 import { processQueue } from '../redux/actions/processIframeQueue';
 import $ from 'jquery';
 
-function useSingles() {
-    const [singles, setSingles] = useState<Single[]>([]);
+function useAlbums() {
+    const [albums, setAlbums] = useState<Album[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const artistId = useSelector((state: RootState) => state.artist.artistId);
     const iframeId = useSelector((state: RootState) => state.iframe.iframeId);
@@ -27,7 +27,7 @@ function useSingles() {
             });
         }
 
-        async function fetchSingles() {
+        async function fetchAlbums() {
             const urlDomain = getUrlDomain();
             const url = `https://${urlDomain}/World/Popmundo.aspx/Artist/Records/${artistId}`;
             const iframeContents = await loadIframe(url);
@@ -35,27 +35,27 @@ function useSingles() {
             iframeContents.find('style, link[rel="stylesheet"], script').remove();
             iframeContents.find('.header, .footer').remove();
 
-            const singleElements = iframeContents.find('#tablesingles tbody tr').slice(0, 4);
+            const albumElements = iframeContents.find('#tablealbums tbody tr').slice(0, 4);
 
-            const singleUrls = singleElements
+            const albumUrls = albumElements
                 .map(function () {
-                    const singleHref = $(this).find('a').attr('href');
-                    return singleHref ? `https://${urlDomain}${singleHref}` : null;
+                    const albumHref = $(this).find('a').attr('href');
+                    return albumHref ? `https://${urlDomain}${albumHref}` : null;
                 })
                 .get()
                 .filter(Boolean) as string[];
 
-            const singlesData: Single[] = [];
-            for (const singleUrl of singleUrls) {
-                const single = await fetchSingleDetails(singleUrl);
-                if (single) singlesData.push(single);
+            const albumsData: Album[] = [];
+            for (const albumUrl of albumUrls) {
+                const album = await fetchAlbumDetails(albumUrl);
+                if (album) albumsData.push(album);
             }
 
-            setSingles(singlesData);
+            setAlbums(albumsData);
             setIsLoading(false);
         }
 
-        async function fetchSingleDetails(url: string): Promise<Single | null> {
+        async function fetchAlbumDetails(url: string): Promise<Album | null> {
             try {
                 const iframeContents = await loadIframe(url);
 
@@ -63,17 +63,28 @@ function useSingles() {
                     ? iframeContents.find('.RecordCover')
                     : iframeContents.find('.RecordCoverEmpty');
 
-                const title = recordCover.next('table').find('tbody tr').eq(0).find('td').eq(1).text().trim();
+                // Título
+                const title = recordCover.next('table').find('tbody tr').filter((_, el) =>
+                    $(el).find('td').first().text().includes('Disco:')
+                ).find('td').last().text().trim();
 
-                const releaseDateStr = iframeContents.find('.RecordCover + table tbody tr').eq(2).find('td').eq(1).text().trim();
+                // Data de lançamento
+                const releaseDateStr = recordCover.next('table').find('tbody tr').filter((_, el) =>
+                    $(el).find('td').first().text().includes('Lançamento:')
+                ).find('td').last().text().trim();
                 const releaseDate = new Date(releaseDateStr);
 
+                // Vendas
                 const sellsStr = iframeContents.find("a#ctl00_cphLeftColumn_ctl01_lnkUnitsSold").text().replace(/\D/g, '');
                 const sells = parseInt(sellsStr, 10) || 0;
 
-                const stockStr = iframeContents.find('.RecordCover + table tbody tr').eq(7).find('td').eq(1).text().replace(/\D/g, '');
+                // Estoque
+                const stockStr = recordCover.next('table').find('tbody tr').filter((_, el) =>
+                    $(el).find('td').first().text().includes('Estoque:')
+                ).find('td').last().text().replace(/\D/g, '');
                 const stock = parseInt(stockStr, 10) || 0;
 
+                // Última venda
                 const lastSellRow = iframeContents.find('#tablerecentsales tbody tr').first();
                 const lastSellDateStr = lastSellRow.find('td').eq(0).clone().children().remove().end().text().trim();
                 const [day, month, year] = lastSellDateStr.split('/').map(Number);
@@ -82,18 +93,28 @@ function useSingles() {
                 const lastSellStr = lastSellRow.find('td').eq(1).text().replace(/\D/g, '');
                 const lastSell = parseInt(lastSellStr, 10) || 0;
 
-                const artistGainStr = iframeContents.find('.RecordCover + table tbody tr').eq(10).find('td').last().text().replace(/[^0-9,]/g, '').replace(',', '.');
+                // Ganhos do artista
+                const artistGainStr = recordCover.next('table').find('tbody tr').filter((_, el) =>
+                    $(el).find('td').first().text().includes('Ganhos do artista:')
+                ).find('td').last().text().replace(/[^0-9,]/g, '').replace(',', '.');
                 const artistGain = parseFloat(artistGainStr) || 0;
 
-                const recordLabelGainStr = iframeContents.find('.RecordCover + table tbody tr').eq(11).find('td').last().text().replace(/[^0-9,]/g, '').replace(',', '.');
+                // Ganhos da gravadora
+                const recordLabelGainStr = recordCover.next('table').find('tbody tr').filter((_, el) =>
+                    $(el).find('td').first().text().includes('Ganhos do estúdio:')
+                ).find('td').last().text().replace(/[^0-9,]/g, '').replace(',', '.');
                 const recordLabelGain = parseFloat(recordLabelGainStr) || 0;
 
-                const evaluationStr = iframeContents.find('tr').eq(8).find('a').attr('title') || '0/26';
+                // Avaliação
+                const evaluationStr = iframeContents.find('tr').filter((_, el) =>
+                    $(el).find('td').first().text().includes('Resenha:')
+                ).find('a').attr('title') || '0/26';
                 const evaluation = parseInt(evaluationStr.split('/')[0]) || 0;
 
+                // Imagem de capa
                 const imageUrl = iframeContents.find('.RecordCover').css('background-image')?.slice(5, -2) || '';
 
-                return new SingleImpl(
+                return new AlbumImpl(
                     title,
                     sells,
                     lastSell,
@@ -106,15 +127,16 @@ function useSingles() {
                     stock
                 );
             } catch (error) {
-                console.error('Error fetching single details:', error);
+                console.error('Error fetching album details:', error);
                 return null;
             }
         }
 
-        fetchSingles();
+
+        fetchAlbums();
     }, [artistId, iframeId, dispatch]);
 
-    return { singles, isLoading };
+    return { albums, isLoading };
 }
 
-export default useSingles;
+export default useAlbums;

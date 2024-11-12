@@ -1,7 +1,7 @@
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 import { Skeleton } from '@mui/material';
-import useSingles from '../hooks/useSingles';
+import useAlbums from '../hooks/useAlbums';
 import { BarChart, PieChart } from '@mui/x-charts';
 import BoxDiv from './BoxDiv';
 import TabContext from '@mui/lab/TabContext';
@@ -9,8 +9,8 @@ import TabList from '@mui/lab/TabList';
 import TabPanel from '@mui/lab/TabPanel';
 import Tab from '@mui/material/Tab';
 
-const SinglesSection: React.FC = () => {
-    const { singles, isLoading: isLoadingSingles } = useSingles();
+const AlbumsSection: React.FC = () => {
+    const { albums, isLoading: isLoadingAlbums } = useAlbums();
     const [value, setValue] = React.useState('1');
 
     const handleChange = (event: React.SyntheticEvent, newValue: string) => {
@@ -25,12 +25,12 @@ const SinglesSection: React.FC = () => {
         width: 500,
         height: 400,
     };
-    // Filtra singles para remover aqueles com `lastSell` inexistente ou igual a zero
-    const filteredSingles = singles.filter(single => single.lastSell && single.lastSell > 0);
+    // Filtra albums para remover aqueles com `lastSell` inexistente ou igual a zero
+    const filteredAlbums = albums.filter(album => album.lastSell && album.lastSell > 0);
 
     return (
-        <BoxDiv title="Singles">
-            {isLoadingSingles ? (
+        <BoxDiv title="Albums">
+            {isLoadingAlbums ? (
                 <div>
                     <Skeleton variant="circular" width={100} height={100} />
                 </div>
@@ -43,15 +43,15 @@ const SinglesSection: React.FC = () => {
                     </TabList>
                     <TabPanel value="1">
                         <Typography variant="h6">
-                            Sales on {filteredSingles.length > 0 ? filteredSingles[0].lastSellDate.toLocaleDateString() : 'Data não disponível'}
+                            Sales on {filteredAlbums.length > 0 ? filteredAlbums[0].lastSellDate.toLocaleDateString() : 'Data não disponível'}
                         </Typography>
                         <PieChart
                             series={[
                                 {
-                                    data: filteredSingles.map((single, index) => ({
+                                    data: filteredAlbums.map((album, index) => ({
                                         id: index,
-                                        value: single.lastSell,
-                                        label: single.title,
+                                        value: album.lastSell,
+                                        label: album.title,
                                     })),
                                     highlightScope: { fade: 'global', highlight: 'item' },
 
@@ -64,15 +64,15 @@ const SinglesSection: React.FC = () => {
                         <Table>
                             <TableHead>
                                 <TableRow>
-                                    <TableCell>Single</TableCell>
+                                    <TableCell>Album</TableCell>
                                     <TableCell align="right">Remaining Stock</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {filteredSingles.map((single) => (
-                                    <TableRow key={single.title}>
-                                        <TableCell>{single.title}</TableCell>
-                                        <TableCell align="right">{single.stock}</TableCell>
+                                {filteredAlbums.map((album) => (
+                                    <TableRow key={album.title}>
+                                        <TableCell>{album.title}</TableCell>
+                                        <TableCell align="right">{album.stock}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -88,16 +88,16 @@ const SinglesSection: React.FC = () => {
                             }}
                             series={[
                                 {
-                                    data: filteredSingles.map(single => single.sells),
+                                    data: filteredAlbums.map(album => album.sells),
                                 },
                             ]}
                             xAxis={[{
                                 scaleType: 'band',
-                                data: filteredSingles.map(single => {
+                                data: filteredAlbums.map(album => {
                                     const maxLabelLength = 7; // Define the maximum number of characters
-                                    return single.title.length > maxLabelLength
-                                        ? `${single.title.slice(0, maxLabelLength)}...`
-                                        : single.title;
+                                    return album.title.length > maxLabelLength
+                                        ? `${album.title.slice(0, maxLabelLength)}...`
+                                        : album.title;
                                 }),
                             }]}
                             height={200}
@@ -112,4 +112,4 @@ const SinglesSection: React.FC = () => {
     );
 };
 
-export default SinglesSection;
+export default AlbumsSection;
