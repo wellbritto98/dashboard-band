@@ -23,7 +23,7 @@ function useShow() {
         async function loadIframe(url: string): Promise<JQuery<Document>> {
             return new Promise((resolve, reject) => {
                 dispatch(addTaskToQueue({ url, resolve, reject }));
-                dispatch(processQueue()); // Agora é tratado como uma ação com `AppDispatch`
+                dispatch(processQueue());
             });
         }
 
@@ -39,11 +39,9 @@ function useShow() {
                 const dateText = $(this).find('td:nth-child(1)').contents().filter(function () {
                     return this.nodeType === Node.TEXT_NODE;
                 }).text().trim();
-                console.log('dateText', dateText);
                 const dateParts = dateText.split(', ')[0].split('/');
                 const timePart = dateText.split(', ')[1];
                 const date = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}T${timePart}`);
-
 
                 const city = $(this).find('td:nth-child(2) a').last().text().trim();
                 const sales = parseInt($(this).find('td:nth-child(3)').text().trim(), 10);
@@ -51,8 +49,16 @@ function useShow() {
                 const idMatch = $(this).find('a').last().attr('href')?.match(/\/(\d+)$/);
                 const id = idMatch ? parseInt(idMatch[1], 10) : 0;
 
+                const isStadium = $(this)
+                .find('td:nth-child(4) img')
+                .filter(function () {
+                    const imgId = $(this).attr('id');
+                    return imgId?.endsWith('imgStadium') || false; // Garante que o retorno seja boolean
+                }).length > 0;
+            
+
                 if (id && !isNaN(sales)) {
-                    newShowsList.push(new ShowImpl(id, date, city, sales));
+                    newShowsList.push(new ShowImpl(id, date, city, sales, isStadium));
                 }
             });
 
@@ -62,7 +68,7 @@ function useShow() {
 
         fetchShows();
     }, [artistId, iframeId, dispatch]);
-    console.log('showsList', showsList);
+
     return { showsList, isLoading };
 }
 

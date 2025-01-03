@@ -15,6 +15,7 @@ import TabList from '@mui/lab/TabList';
 import TabPanel from '@mui/lab/TabPanel';
 import Tab from '@mui/material/Tab';
 import AlbumsSection from './components/AlbumsSection';
+import StadiumsSection from './components/StadiumsSection';
 
 function App() {
     const dispatch = useDispatch();
@@ -77,12 +78,16 @@ function App() {
                 >
                     <Tab sx={{ fontSize: 12 }} label="Pop and Fame" value="1" />
                     <Tab sx={{ fontSize: 12 }} label="Shows" value="2" />
+                    <Tab sx={{ fontSize: 12 }} label="Stadiums" value="3" />
                 </TabList>
                 <TabPanel value="1" sx={{ paddingX: 0, backgroundColor: '#e5e5e5' }}> {/* Fundo dos TabPanels definido */}
                     <FameAndPopularitySection />
                 </TabPanel>
                 <TabPanel value="2" sx={{ paddingX: 0, backgroundColor: '#e5e5e5' }}> {/* Fundo dos TabPanels definido */}
                     <ShowsSection />
+                </TabPanel>
+                <TabPanel value="3" sx={{ paddingX: 0, backgroundColor: '#e5e5e5' }}> {/* Fundo dos TabPanels definido */}
+                    <StadiumsSection />
                 </TabPanel>
             </TabContext>
 
