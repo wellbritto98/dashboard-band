@@ -57479,7 +57479,7 @@ To suppress this warning, you need to explicitly provide the \`palette.${key}Cha
       },
       "Fame ",
       sortColumn === "fame" && (sortDirection === "asc" ? "↑" : "↓")
-    ))), /* @__PURE__ */ React$1.createElement("tbody", null, sortedList.map((pop, index) => /* @__PURE__ */ React$1.createElement("tr", { key: index }, /* @__PURE__ */ React$1.createElement("td", { style: { border: "1px solid #ddd", padding: 8 } }, pop.city), /* @__PURE__ */ React$1.createElement("td", { style: { border: "1px solid #ddd", padding: 8 } }, pop.popularity), /* @__PURE__ */ React$1.createElement("td", { style: { border: "1px solid #ddd", padding: 8 } }, pop.fame)))))))));
+    ))), /* @__PURE__ */ React$1.createElement("tbody", null, sortedList.map((pop, index) => /* @__PURE__ */ React$1.createElement("tr", { key: index }, /* @__PURE__ */ React$1.createElement("td", { style: { border: "1px solid #ddd", padding: 8 } }, pop.city), /* @__PURE__ */ React$1.createElement("td", { style: { border: "1px solid #ddd", padding: 8 } }, pop.popularity), /* @__PURE__ */ React$1.createElement("td", { style: { border: "1px solid #ddd", padding: 8 } }, pop.fame, "%")))))))));
   };
   function App() {
     const dispatch = useDispatch();

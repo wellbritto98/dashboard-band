@@ -168,7 +168,7 @@ const StadiumsSection: React.FC = () => {
                                             <tr key={index}>
                                                 <td style={{ border: "1px solid #ddd", padding: 8 }}>{pop.city}</td>
                                                 <td style={{ border: "1px solid #ddd", padding: 8 }}>{pop.popularity}</td>
-                                                <td style={{ border: "1px solid #ddd", padding: 8 }}>{pop.fame}</td>
+                                                <td style={{ border: "1px solid #ddd", padding: 8 }}>{pop.fame}%</td>
                                             </tr>
                                         ))}
                                     </tbody>
