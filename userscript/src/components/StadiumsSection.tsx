@@ -68,6 +68,8 @@ const StadiumsSection: React.FC = () => {
         .filter(show => show.city.toLowerCase().includes(filterTextWorst.toLowerCase()))
         .slice(0, numShows);
 
+    const quantidadeShowsStadium = showsList.filter(show => show.isStadium).length;
+
     return (
         <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="pt-br">
             <div style={{ display: "flex", flexDirection: "column", gap: 14, justifyContent: "center", alignItems: "center", width: "100%" }}>
@@ -100,7 +102,7 @@ const StadiumsSection: React.FC = () => {
                                 onChange={(event, newValue) => setNumShows(newValue as number)}
                                 aria-labelledby="shows-slider"
                                 min={1}
-                                max={10}
+                                max={quantidadeShowsStadium}
                                 valueLabelDisplay="auto"
                             />
 
